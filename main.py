@@ -1,46 +1,51 @@
-import platform
-
-import aiohttp
 import asyncio
-import requests
+import platform
+import logging
 import sys
 from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor
 
-days_to_count = int(sys.argv[1])
-if days_to_count > 10:
-    while True:
-        days_to_count = int(input('10 days max. Enter number of days: '))
-        if days_to_count <= 10:
-            break
-date = datetime.now()
-date_for_url = datetime.now().strftime('%d.%m.%Y')
-delta = timedelta(days=1)
-url_privat = 'https://api.privatbank.ua/p24api/exchange_rates?date='
+import aiohttp
 
-urls = []
+def get_urls_by_date(days: int):
 
-for day in range(days_to_count):
-    urls.append(url_privat + date_for_url)
-    date -= delta
-    date_for_url = date.strftime('%d.%m.%Y') 
+    if days > 10:
+        while True:
+            days = int(input('10 days max. Enter number of days: '))
+            if days <= 10:
+                break
 
-def get_exchange(url):
-    result = requests.get(url)
-    return result.json()
+    date = datetime.now()
+    date_for_url = datetime.now().strftime('%d.%m.%Y')
+    delta = timedelta(days=1)
+    url = 'https://api.privatbank.ua/p24api/exchange_rates?date='
 
-async def get_exchange_rates():
-    loop = asyncio.get_running_loop()
+    urls = []
 
-    with ThreadPoolExecutor(days_to_count) as pool:
-        futures = [loop.run_in_executor(pool, get_exchange, url) for url in urls]
-        result = await asyncio.gather(*futures, return_exceptions=True)
-        return result
+    for day in range(days):
+        urls.append(url + date_for_url)
+        date -= delta
+        date_for_url = date.strftime('%d.%m.%Y')
+
+    return urls
+
+async def request(url):
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data
+                logging.error(f'error status {response.status} for {url}')
+        except aiohttp.ClientConnectorError as e:
+            logging.error(f'connection error for {url}: {e}')
+    return None
     
-if __name__ == "__main__":
-    if platform.system() == 'Windows':
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    rates = asyncio.run(get_exchange_rates())
+async def main():
+    r = []
+    for url in urls:
+        r.append(request(url))
+    rates = await asyncio.gather(*r)
+    
     result = []
 
     for rate in rates:
@@ -58,5 +63,14 @@ if __name__ == "__main__":
           }
         }
         result.append(format_rate)
-        
+
+    return result
+
+if __name__ == "__main__":
+    if platform.system() == 'Windows':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    urls = get_urls_by_date(int(sys.argv[1]))
+    result = asyncio.run(main())
     print(result)
+    
+    

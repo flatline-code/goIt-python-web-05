@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import aiohttp
 
-def get_urls_by_date(days: int):
+def get_urls_by_date(days):
 
     if days > 10:
         while True:
@@ -40,7 +40,7 @@ async def request(url):
             logging.error(f'connection error for {url}: {e}')
     return None
     
-async def main():
+async def main(urls):
     r = []
     for url in urls:
         r.append(request(url))
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     if platform.system() == 'Windows':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     urls = get_urls_by_date(int(sys.argv[1]))
-    result = asyncio.run(main())
+    result = asyncio.run(main(urls))
     print(result)
     
     

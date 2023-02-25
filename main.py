@@ -8,6 +8,11 @@ from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 days_to_count = int(sys.argv[1])
+if days_to_count > 10:
+    while True:
+        days_to_count = int(input('10 days max. Enter number of days: '))
+        if days_to_count <= 10:
+            break
 date = datetime.now()
 date_for_url = datetime.now().strftime('%d.%m.%Y')
 delta = timedelta(days=1)
